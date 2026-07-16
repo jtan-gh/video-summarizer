@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Transcript Study Tool</title>
+  <link rel="stylesheet" href="/static/base.css" />
+  <style>
+    /* ── Page layout ── */
+    body {
+      min-height:      100vh;
+      display:         flex;
+      flex-direction:  column;
+      align-items:     center;
+      justify-content: center;
+      padding:         calc(var(--topbar) + 2rem) 1rem 2rem;
+    }
+
+    .topbar {
+      position: fixed;
+      top:      0;
+      left:     0;
+      right:    0;
+    }
+
+    /* ── Card ── */
+    .card {
+      width:         100%;
+      max-width:     520px;
+      padding:       2.5rem;
+      background:    var(--surface);
+      border:        1px solid var(--border);
+      border-radius: var(--radius);
+    }
+
+    .card-title {
+      margin:      0.5rem 0;
+      font-size:   1.75rem;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .card-subtitle {
+      margin-bottom: 2rem;
+      font-size:     0.9rem;
+      line-height:   1.6;
+      color:         var(--muted);
+    }
+
+    /* ── URL input form ── */
+    .url-form {
+      display:        flex;
+      flex-direction: column;
+      gap:            0.75rem;
+    }
+
+    .url-input {
+      padding: 0.75rem 1rem;
+      font-size: 0.95rem;
+    }
+
+    .submit-btn {
+      width:       100%;
+      padding:     0.8rem;
+      font-size:   0.95rem;
+    }
+
+    /* ── Loading ── */
+    .loading {
+      display:    none;
+      margin-top: 1rem;
+      text-align: center;
+      font-size:  0.875rem;
+      color:      var(--muted);
+      gap:        0.5rem;
+    }
+
+    .loading.visible {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="topbar">
+    <span class="brand">Study Tool</span>
+    <nav class="topbar-right">
+      {% if current_user %}
+        <a href="/library">Library</a>
+        <span style="color: var(--muted);">{{ current_user.email }}</span>
+        <a href="/auth/logout">Log out</a>
+      {% else %}
+        <a href="/auth/login" class="btn btn-ghost">Sign in with Google</a>
+      {% endif %}
+    </nav>
+  </header>
+
+  <main>
+    <div class="card">
+      <p class="eyebrow">Study Tool</p>
+      <h1 class="card-title">Turn any video into notes</h1>
+      <p class="card-subtitle">Paste a YouTube URL and get a structured article and study notes.</p>
+
+      {% if error %}
+        <div class="banner-error" style="margin-bottom: 1.25rem;">{{ error }}</div>
+      {% endif %}
+
+      <form class="url-form" action="/generate" method="POST" onsubmit="handleSubmit()">
+        <label class="field-label" for="url">YouTube URL</label>
+        <input
+          class="field url-input"
+          type="text"
+          id="url"
+          name="url"
+          placeholder="https://www.youtube.com/watch?v=..."
+          autocomplete="off"
+          required
+        />
+        <button class="btn btn-primary submit-btn" type="submit" id="submit-btn">
+          Generate
+        </button>
+      </form>
+
+      <div class="loading" id="loading">
+        <span class="spinner"></span>
+        Fetching transcript and generating — this may take a minute…
+      </div>
+    </div>
+  </main>
+
+  <script>
+    function handleSubmit() {
+      document.getElementById("submit-btn").disabled = true;
+      document.getElementById("loading").classList.add("visible");
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+# Environment
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+*.egg-info/
+
+# uv
+.uv/
+
+# OS
+.DS_Store
+Thumbs.db

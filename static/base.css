@@ -1,0 +1,293 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg:       #0f1117;
+  --surface:  #1a1d27;
+  --border:   #2a2d3a;
+  --accent:   #7c6af7;
+  --accent-h: #9b8dff;
+  --text:     #e8e9f0;
+  --muted:    #6b6e82;
+  --error:    #f87171;
+  --radius:   12px;
+  --topbar:   57px;
+  --font:     'Inter', system-ui, sans-serif;
+}
+
+
+/* ── Base ───────────────────────────────────────────────────── */
+
+body {
+  background:  var(--bg);
+  color:       var(--text);
+  font-family: var(--font);
+}
+
+a {
+  color:           var(--muted);
+  text-decoration: none;
+  transition:      color 0.15s;
+}
+
+a:hover {
+  color: var(--text);
+}
+
+
+/* ── Topbar ─────────────────────────────────────────────────── */
+
+.topbar {
+  height:          var(--topbar);
+  padding:         0 1.5rem;
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  border-bottom:   1px solid var(--border);
+  background:      var(--bg);
+  z-index:         10;
+}
+
+.topbar .brand {
+  font-size:      0.8rem;
+  font-weight:    600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color:          var(--accent);
+}
+
+.topbar-right {
+  display:     flex;
+  align-items: center;
+  gap:         1rem;
+  font-size:   0.85rem;
+}
+
+
+/* ── Buttons ────────────────────────────────────────────────── */
+
+.btn {
+  display:       inline-flex;
+  align-items:   center;
+  gap:           0.4rem;
+  padding:       0.45rem 0.9rem;
+  border:        1px solid var(--border);
+  border-radius: 8px;
+  background:    transparent;
+  color:         var(--muted);
+  font-family:   var(--font);
+  font-size:     0.85rem;
+  font-weight:   500;
+  cursor:        pointer;
+  transition:    color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.btn:hover {
+  color:        var(--text);
+  border-color: var(--text);
+}
+
+.btn-primary {
+  background:   var(--accent);
+  border-color: var(--accent);
+  color:        #fff;
+}
+
+.btn-primary:hover {
+  background:   var(--accent-h);
+  border-color: var(--accent-h);
+  color:        #fff;
+}
+
+.btn-ghost {
+  border-color: transparent;
+}
+
+.btn-ghost:hover {
+  border-color: var(--border);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor:  not-allowed;
+}
+
+
+/* ── Icon button ────────────────────────────────────────────── */
+
+.icon-btn {
+  display:       inline-flex;
+  align-items:   center;
+  justify-content: center;
+  width:         24px;
+  height:        24px;
+  border:        none;
+  border-radius: 4px;
+  background:    transparent;
+  color:         var(--muted);
+  font-size:     0.85rem;
+  cursor:        pointer;
+  transition:    color 0.15s, background 0.15s;
+  flex-shrink:   0;
+}
+
+.icon-btn:hover {
+  color:       var(--text);
+  background:  var(--border);
+}
+
+
+/* ── Form fields ────────────────────────────────────────────── */
+
+.field {
+  width:         100%;
+  padding:       0.65rem 0.875rem;
+  background:    var(--bg);
+  border:        1px solid var(--border);
+  border-radius: 8px;
+  color:         var(--text);
+  font-family:   var(--font);
+  font-size:     0.9rem;
+  outline:       none;
+  transition:    border-color 0.15s;
+}
+
+.field:focus {
+  border-color: var(--accent);
+}
+
+.field::placeholder {
+  color: var(--muted);
+}
+
+.field-label {
+  display:        block;
+  margin-bottom:  0.4rem;
+  font-size:      0.75rem;
+  font-weight:    500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color:          var(--muted);
+}
+
+
+/* ── Modal ──────────────────────────────────────────────────── */
+
+.modal-overlay {
+  display:         none;
+  position:        fixed;
+  inset:           0;
+  background:      rgba(0, 0, 0, 0.6);
+  z-index:         100;
+  align-items:     center;
+  justify-content: center;
+  padding:         1rem;
+}
+
+.modal-overlay.open {
+  display: flex;
+}
+
+.modal {
+  width:         100%;
+  max-width:     400px;
+  padding:       1.5rem;
+  background:    var(--surface);
+  border:        1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.modal-title {
+  font-size:     1rem;
+  font-weight:   600;
+  margin-bottom: 1.25rem;
+}
+
+.modal-body {
+  display:        flex;
+  flex-direction: column;
+  gap:            0.75rem;
+}
+
+.modal-actions {
+  display:         flex;
+  justify-content: flex-end;
+  gap:             0.5rem;
+  margin-top:      1.25rem;
+}
+
+
+/* ── Error banner ───────────────────────────────────────────── */
+
+.banner-error {
+  padding:       0.75rem 1rem;
+  background:    rgba(248, 113, 113, 0.1);
+  border:        1px solid rgba(248, 113, 113, 0.3);
+  border-radius: 8px;
+  color:         var(--error);
+  font-size:     0.875rem;
+}
+
+
+/* ── Eyebrow label ──────────────────────────────────────────── */
+
+.eyebrow {
+  font-size:      0.7rem;
+  font-weight:    600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color:          var(--accent);
+}
+
+
+/* ── Spinner ────────────────────────────────────────────────── */
+
+.spinner {
+  display:          inline-block;
+  width:            14px;
+  height:           14px;
+  border:           2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius:    50%;
+  animation:        spin 0.7s linear infinite;
+  vertical-align:   middle;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+
+/* ── Empty state ────────────────────────────────────────────── */
+
+.empty-state {
+  padding:    4rem 2rem;
+  text-align: center;
+  color:      var(--muted);
+}
+
+.empty-state p {
+  margin-top: 0.5rem;
+  font-size:  0.875rem;
+}
+
+
+/* ── Scrollbar ──────────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background:    var(--border);
+  border-radius: 99px;
+}
