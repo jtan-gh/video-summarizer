@@ -28,61 +28,121 @@
   {% block content %}{% endblock %}
 
   {% if current_user %}
+  <style>
+    #session-warning {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    #session-warning.open { display: flex; }
+    #session-warning .session-warning-box {
+      background: var(--bg, #fff);
+      color: var(--fg, #111);
+      max-width: 360px;
+      padding: 1.5rem;
+      border-radius: 8px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    }
+    #session-warning .session-warning-box button {
+      margin-top: 1rem;
+    }
+  </style>
+  <div id="session-warning" role="alertdialog" aria-live="assertive">
+    <div class="session-warning-box">
+      <p>You've been inactive for a while.</p>
+      <p>You'll be signed out in <strong id="countdown">300</strong> seconds.</p>
+      <button type="button" class="btn" onclick="keepAlive()">Stay signed in</button>
+    </div>
+  </div>
+
   <script>
-    const INACTIVITY_LIMIT  = 25 * 60 * 1000;  // 25 min — warn before 30min Supabase default
-    const WARNING_DURATION  = 60 * 1000;        // 60s countdown before auto-logout
-    const SESSION_CHECK     = 5 * 60 * 1000;    // check server session every 5 min
+    // Keep these two in sync with auth.py's INACTIVITY_TIMEOUT /WARNING_LEAD_TIME. 
+    // Best done by injecting them from Flask instead of duplicating the numbers
+    // fallback here in case that hasn't been wired up yet.
+    const INACTIVITY_TIMEOUT_MS = {{ (inactivity_timeout_seconds | default(3600)) * 1000 }};
+    const WARNING_LEAD_MS        = {{ (warning_lead_seconds | default(300)) * 1000 }};
 
-    let inactivityTimer;
-    let countdownTimer;
-    let countdownValue;
+    const LAST_ACTIVITY_MIN_GAP_MS = 60 * 1000*5;
+    const PASSIVE_CHECK_MS     = 60 * 1000*5;
 
-    function resetInactivityTimer() {
-      clearTimeout(inactivityTimer);
-      inactivityTimer = setTimeout(showWarning, INACTIVITY_LIMIT);
+    let warnTimer, logoutTimer, countdownTimer;
+    let logoutAt = 0;
+    let lastActivityAt = 0;
+
+    function warningEl() {
+      return document.getElementById("session-warning");
+    }
+
+    function isWarningOpen() {
+      return warningEl().classList.contains("open");
+    }
+
+    function scheduleFromNow() {
+      clearTimeout(warnTimer);
+      clearTimeout(logoutTimer);
+      clearInterval(countdownTimer);
+      warningEl().classList.remove("open");
+
+      const now = Date.now();
+      logoutAt = now + INACTIVITY_TIMEOUT_MS;
+      const warnAt = logoutAt - WARNING_LEAD_MS;
+
+      warnTimer = setTimeout(showWarning, Math.max(0, warnAt - now));
     }
 
     function showWarning() {
-      document.getElementById("session-warning").classList.add("open");
-      countdownValue = 60;
-      document.getElementById("countdown").textContent = countdownValue;
+      warningEl().classList.add("open");
 
-      countdownTimer = setInterval(() => {
-        countdownValue--;
-        document.getElementById("countdown").textContent = countdownValue;
-        if (countdownValue <= 0) {
+      const tick = () => {
+        const remaining = Math.max(0, Math.round((logoutAt - Date.now()) / 1000));
+        document.getElementById("countdown").textContent = remaining;
+        if (remaining <= 0) {
           clearInterval(countdownTimer);
           window.location.href = "/auth/logout";
         }
-      }, 1000);
+      };
+      tick();
+      countdownTimer = setInterval(tick, 1000);
     }
 
+    function recordActivity() {
+      if (!isWarningOpen()) {
+        scheduleFromNow();
+      }
+      const now = Date.now();
+      if (now - lastActivityAt > LAST_ACTIVITY_MIN_GAP_MS) {
+        lastActivityAt = now;
+        fetch("/auth/last_activity", { method: "POST" }).catch(() => {});
+      }
+    }
+
+    // Explicit "I'm still here" from the warning dialog.
     function keepAlive() {
-      clearInterval(countdownTimer);
-      document.getElementById("session-warning").classList.remove("open");
-
-      // Ping the server to refresh the token
-      fetch("/auth/status").then(res => {
-        if (!res.ok) window.location.href = "/auth/logout";
-      });
-
-      resetInactivityTimer();
+      lastActivityAt = Date.now();
+      fetch("/auth/last_activity", { method: "POST" })
+        .then(res => {
+          if (!res.ok) { window.location.href = "/auth/logout"; return; }
+          scheduleFromNow();
+        })
+        .catch(() => { window.location.href = "/auth/logout"; });
     }
 
-    // Track user activity
-    ["mousemove", "keydown", "click", "scroll", "touchstart"].forEach(event => {
-      document.addEventListener(event, resetInactivityTimer, { passive: true });
+    ["mousemove", "keydown", "click", "scroll", "touchstart"].forEach(evt => {
+      document.addEventListener(evt, recordActivity, { passive: true });
     });
 
-    // Periodically check server session health
     setInterval(() => {
       fetch("/auth/status").then(res => {
         if (!res.ok) window.location.href = "/auth/logout";
       });
-    }, SESSION_CHECK);
+    }, PASSIVE_CHECK_MS);
 
-    // Start the timer
-    resetInactivityTimer();
+    scheduleFromNow();
   </script>
   {% endif %}
   

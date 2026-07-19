@@ -3,7 +3,6 @@
 {% block title %}Results — Study Tool{% endblock %}
 
 {% block head %}
-{{ super() }}
 <style>
   :root {
     --library-sidebar: 260px;
@@ -16,12 +15,12 @@
     min-height: calc(100vh - var(--navbar-height));
   }
 
-  .main-title {
+  .folder-title {
     font-size: 1.1rem;
     font-weight: 600;
   }
 
-  .main-count {
+  .file-count {
     margin-top: 0.2rem;
     font-size: 0.8rem;
     color: var(--muted);
@@ -291,7 +290,7 @@
         <!-- <div>TODO: add search here</div> -->
       </div>
     </div>
-    <span class="main-title" id="main-title"></span><span class="main-count" id="main-count"></span>
+    <span class="folder-title" id="folder-title"></span><span class="file-count" id="file-count"></span>
     <select class="field sort-select" id="sort-select" onchange="applySort()">
       <option value="date-desc">Newest first</option>
       <option value="date-asc">Oldest first</option>
@@ -420,7 +419,7 @@
     currentFilter = filter;
     document.querySelectorAll(".folder-row, .unfiled-row").forEach(r => r.classList.remove("active"));
     document.getElementById("row-" + filter)?.classList.add("active");
-    document.getElementById("main-title").textContent =
+    document.getElementById("folder-title").textContent =
       folderName || { all: "All saves", unfiled: "Unfiled" }[filter] || "Folder";
     currentSaves = filter === "all" ? [...allSaves]
       : filter === "unfiled" ? allSaves.filter(s => !s.folder_id)
@@ -442,7 +441,7 @@
   /* ── Render cards ── */
   function renderSaves(saves) {
     const grid = document.getElementById("files-grid");
-    document.getElementById("main-count").textContent = `(${saves.length} articles)`;
+    document.getElementById("file-count").textContent = `(${saves.length} articles)`;
 
     if (!saves.length) {
       grid.innerHTML = `<div class="empty-state"><div style="font-size:2.5rem">📭</div><p>No saves here yet.</p></div>`;
@@ -483,7 +482,7 @@
     if (!confirm("Delete this save?")) return;
     await fetch(`/saves/${id}`, { method: "DELETE" });
     allSaves.splice(allSaves.findIndex(s => s.id === id), 1);
-    filterSaves(currentFilter, document.getElementById("main-title").textContent);
+    filterSaves(currentFilter, document.getElementById("folder-title").textContent);
   }
 
   function openRenameSaveModal(e, id, title) {
@@ -537,7 +536,7 @@
       const save = allSaves.find(s => s.id === id);
       if (save) save.folder_id = folder_id;
       closeModal("move-save-modal");
-      filterSaves(currentFilter, document.getElementById("main-title").textContent);
+      filterSaves(currentFilter, document.getElementById("folder-title").textContent);
     } else {
       alert("Failed to move.");
     }
