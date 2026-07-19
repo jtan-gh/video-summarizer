@@ -10,12 +10,12 @@ load_dotenv()
 
 @dataclass
 class VideoData:
-    transcript:  str
-    url:         str
-    title:       str
-    channel:     str
-    thumbnail:   str
-    duration:    int  # seconds
+    transcript: str
+    url: str
+    title: str
+    channel: str
+    thumbnail: str
+    duration: int  # seconds
 
 
 def extract_video_id(url: str) -> str:
@@ -34,6 +34,7 @@ def extract_video_id(url: str) -> str:
 
 # ── YouTube Data API v3 ────────────────────────────────────────────────────────
 
+
 def _get_metadata_via_api(video_id: str) -> dict:
     """Fetch video metadata using YouTube Data API v3."""
     api_key = os.environ.get("YOUTUBE_API_KEY")
@@ -43,10 +44,10 @@ def _get_metadata_via_api(video_id: str) -> dict:
     response = requests.get(
         "https://www.googleapis.com/youtube/v3/videos",
         params={
-            "key":  api_key,
-            "id":   video_id,
+            "key": api_key,
+            "id": video_id,
             "part": "snippet,contentDetails",
-        }
+        },
     )
     response.raise_for_status()
     data = response.json()
@@ -54,18 +55,20 @@ def _get_metadata_via_api(video_id: str) -> dict:
     if not data.get("items"):
         raise ValueError(f"Video not found: {video_id}")
 
-    item    = data["items"][0]
+    item = data["items"][0]
     snippet = item["snippet"]
 
     # Parse ISO 8601 duration (PT1H2M3S) to seconds
     duration_str = item["contentDetails"]["duration"]
-    duration     = _parse_duration(duration_str)
+    duration = _parse_duration(duration_str)
 
     return {
-        "title":     snippet["title"],
-        "channel":   snippet["channelTitle"],
-        "thumbnail": snippet["thumbnails"].get("maxres", snippet["thumbnails"].get("high", {})).get("url", ""),
-        "duration":  duration,
+        "title": snippet["title"],
+        "channel": snippet["channelTitle"],
+        "thumbnail": snippet["thumbnails"]
+        .get("maxres", snippet["thumbnails"].get("high", {}))
+        .get("url", ""),
+        "duration": duration,
     }
 
 
@@ -79,10 +82,10 @@ def _get_transcript_via_api(video_id: str) -> str:
     response = requests.get(
         "https://www.googleapis.com/youtube/v3/captions",
         params={
-            "key":     api_key,
+            "key": api_key,
             "videoId": video_id,
-            "part":    "snippet",
-        }
+            "part": "snippet",
+        },
     )
     response.raise_for_status()
     captions = response.json()
@@ -102,9 +105,9 @@ def _get_transcript_via_api(video_id: str) -> str:
     caption_response = requests.get(
         f"https://www.googleapis.com/youtube/v3/captions/{caption_id}",
         params={
-            "key":  api_key,
+            "key": api_key,
             "tfmt": "srt",
-        }
+        },
     )
     caption_response.raise_for_status()
 
@@ -114,10 +117,10 @@ def _get_transcript_via_api(video_id: str) -> str:
 def _parse_duration(iso_duration: str) -> int:
     """Convert ISO 8601 duration string to seconds."""
     pattern = r"PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?"
-    match   = re.match(pattern, iso_duration)
+    match = re.match(pattern, iso_duration)
     if not match:
         return 0
-    hours   = int(match.group(1) or 0)
+    hours = int(match.group(1) or 0)
     minutes = int(match.group(2) or 0)
     seconds = int(match.group(3) or 0)
     return hours * 3600 + minutes * 60 + seconds
@@ -126,7 +129,7 @@ def _parse_duration(iso_duration: str) -> int:
 def _parse_srt(srt_text: str) -> str:
     """Strip SRT timestamps and return clean transcript text."""
     # Remove sequence numbers, timestamps, and blank lines
-    lines  = srt_text.splitlines()
+    lines = srt_text.splitlines()
     output = []
     for line in lines:
         line = line.strip()
@@ -142,17 +145,18 @@ def _parse_srt(srt_text: str) -> str:
 
 # ── yt-dlp fallback ───────────────────────────────────────────────────────────
 
+
 def _get_video_data_via_ytdlp(url: str) -> VideoData:
     """Fallback: fetch metadata and transcript using yt-dlp."""
     print("Falling back to yt-dlp...")
 
     ydl_opts = {
-        "quiet":            True,
-        "skip_download":    True,
-        "writesubtitles":   True,
+        "quiet": True,
+        "skip_download": True,
+        "writesubtitles": True,
         "writeautomaticsub": True,
-        "subtitleslangs":   ["en"],
-        "subtitlesformat":  "json3",
+        "subtitleslangs": ["en"],
+        "subtitlesformat": "json3",
     }
 
     # Use cookies file if available (for production)
@@ -193,6 +197,7 @@ def _get_video_data_via_ytdlp(url: str) -> VideoData:
 
 # ── Public interface ──────────────────────────────────────────────────────────
 
+
 def get_video_data(url: str) -> VideoData:
     """
     Fetch video metadata and transcript.
@@ -204,7 +209,7 @@ def get_video_data(url: str) -> VideoData:
     if os.environ.get("YOUTUBE_API_KEY"):
         try:
             print("Fetching via YouTube Data API...")
-            metadata   = _get_metadata_via_api(video_id)
+            metadata = _get_metadata_via_api(video_id)
             transcript = _get_transcript_via_api(video_id)
 
             if not transcript.strip():
@@ -229,8 +234,9 @@ def get_video_data(url: str) -> VideoData:
 
 if __name__ == "__main__":
     import sys
-    url    = sys.argv[1] if len(sys.argv) > 1 else "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-    video  = get_video_data(url)
+
+    url = sys.argv[1] if len(sys.argv) > 1 else "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+    video = get_video_data(url)
 
     print(f"\nTitle:      {video.title}")
     print(f"Channel:    {video.channel}")

@@ -20,14 +20,11 @@ def get_authed_client():
 
 # ── Folder helpers ─────────────────────────────────────────────────────────────
 
+
 def fetch_folder_tree() -> list:
     """Fetch all folders for the user and build a nested tree."""
     db = get_authed_client()
-    result = db.table("folders") \
-        .select("*") \
-        .eq("user_id", get_user_id()) \
-        .order("name") \
-        .execute()
+    result = db.table("folders").select("*").eq("user_id", get_user_id()).order("name").execute()
 
     folders = result.data
     return build_tree(folders, parent_id=None)
@@ -43,6 +40,7 @@ def build_tree(folders: list, parent_id) -> list:
 
 
 # ── Folder routes ──────────────────────────────────────────────────────────────
+
 
 @saves_bp.route("/folders", methods=["GET"])
 @login_required
@@ -62,11 +60,17 @@ def create_folder():
         return jsonify({"error": "Folder name is required"}), 400
 
     db = get_authed_client()
-    result = db.table("folders").insert({
-        "user_id":   get_user_id(),
-        "parent_id": parent_id,
-        "name":      name,
-    }).execute()
+    result = (
+        db.table("folders")
+        .insert(
+            {
+                "user_id": get_user_id(),
+                "parent_id": parent_id,
+                "name": name,
+            }
+        )
+        .execute()
+    )
 
     return jsonify(result.data[0]), 201
 
@@ -81,11 +85,13 @@ def rename_folder(folder_id):
         return jsonify({"error": "Folder name is required"}), 400
 
     db = get_authed_client()
-    result = db.table("folders") \
-        .update({"name": name}) \
-        .eq("id", folder_id) \
-        .eq("user_id", get_user_id()) \
+    result = (
+        db.table("folders")
+        .update({"name": name})
+        .eq("id", folder_id)
+        .eq("user_id", get_user_id())
         .execute()
+    )
 
     return jsonify(result.data[0])
 
@@ -94,16 +100,13 @@ def rename_folder(folder_id):
 @login_required
 def delete_folder(folder_id):
     db = get_authed_client()
-    db.table("folders") \
-        .delete() \
-        .eq("id", folder_id) \
-        .eq("user_id", get_user_id()) \
-        .execute()
+    db.table("folders").delete().eq("id", folder_id).eq("user_id", get_user_id()).execute()
 
     return jsonify({"deleted": folder_id})
 
 
 # ── Save routes ────────────────────────────────────────────────────────────────
+
 
 @saves_bp.route("/saves", methods=["POST"])
 @login_required
@@ -111,18 +114,24 @@ def create_save():
     data = request.get_json()
 
     db = get_authed_client()
-    result = db.table("saves").insert({
-        "user_id":       get_user_id(),
-        "folder_id":     data.get("folder_id"),
-        "title":         data["title"],
-        "url":           data["url"],
-        "article":       data["article"],
-        "notes":         data["notes"],
-        "video_title":   data.get("video_title"),
-        "video_channel": data.get("video_channel"),
-        "thumbnail_url": data.get("thumbnail_url"),
-        "duration":      data.get("duration"),
-    }).execute()
+    result = (
+        db.table("saves")
+        .insert(
+            {
+                "user_id": get_user_id(),
+                "folder_id": data.get("folder_id"),
+                "title": data["title"],
+                "url": data["url"],
+                "article": data["article"],
+                "notes": data["notes"],
+                "video_title": data.get("video_title"),
+                "video_channel": data.get("video_channel"),
+                "thumbnail_url": data.get("thumbnail_url"),
+                "duration": data.get("duration"),
+            }
+        )
+        .execute()
+    )
 
     return jsonify(result.data[0]), 201
 
@@ -133,10 +142,14 @@ def list_saves():
     folder_id = request.args.get("folder_id")
 
     db = get_authed_client()
-    query = db.table("saves") \
-        .select("id, title, url, video_title, video_channel, thumbnail_url, duration, folder_id, created_at") \
-        .eq("user_id", get_user_id()) \
+    query = (
+        db.table("saves")
+        .select(
+            "id, title, url, video_title, video_channel, thumbnail_url, duration, folder_id, created_at"
+        )
+        .eq("user_id", get_user_id())
         .order("created_at", desc=True)
+    )
 
     if folder_id == "unfiled":
         query = query.is_("folder_id", "null")
@@ -151,12 +164,14 @@ def list_saves():
 @login_required
 def load_save(save_id):
     db = get_authed_client()
-    result = db.table("saves") \
-        .select("*") \
-        .eq("id", save_id) \
-        .eq("user_id", get_user_id()) \
-        .single() \
+    result = (
+        db.table("saves")
+        .select("*")
+        .eq("id", save_id)
+        .eq("user_id", get_user_id())
+        .single()
         .execute()
+    )
 
     save = result.data
 
@@ -170,11 +185,11 @@ def load_save(save_id):
         article_json=save["article"],
         notes_json=save["notes"],
         video={
-            "url":       save["url"],
-            "title":     save.get("video_title", ""),
-            "channel":   save.get("video_channel", ""),
+            "url": save["url"],
+            "title": save.get("video_title", ""),
+            "channel": save.get("video_channel", ""),
             "thumbnail": save.get("thumbnail_url", ""),
-            "duration":  save.get("duration", 0),
+            "duration": save.get("duration", 0),
         },
         save_id=save_id,
     )
@@ -199,11 +214,9 @@ def update_save(save_id):
         return jsonify({"error": "Nothing to update"}), 400
 
     db = get_authed_client()
-    result = db.table("saves") \
-        .update(updates) \
-        .eq("id", save_id) \
-        .eq("user_id", get_user_id()) \
-        .execute()
+    result = (
+        db.table("saves").update(updates).eq("id", save_id).eq("user_id", get_user_id()).execute()
+    )
 
     return jsonify(result.data[0])
 
@@ -212,16 +225,13 @@ def update_save(save_id):
 @login_required
 def delete_save(save_id):
     db = get_authed_client()
-    db.table("saves") \
-        .delete() \
-        .eq("id", save_id) \
-        .eq("user_id", get_user_id()) \
-        .execute()
+    db.table("saves").delete().eq("id", save_id).eq("user_id", get_user_id()).execute()
 
     return jsonify({"deleted": save_id})
 
 
 # ── Library page ───────────────────────────────────────────────────────────────
+
 
 @saves_bp.route("/library")
 @login_required
@@ -229,11 +239,15 @@ def library():
     tree = fetch_folder_tree()
 
     db = get_authed_client()
-    result = db.table("saves") \
-        .select("id, title, url, video_title, video_channel, thumbnail_url, duration, folder_id, created_at") \
-        .eq("user_id", get_user_id()) \
-        .order("created_at", desc=True) \
+    result = (
+        db.table("saves")
+        .select(
+            "id, title, url, video_title, video_channel, thumbnail_url, duration, folder_id, created_at"
+        )
+        .eq("user_id", get_user_id())
+        .order("created_at", desc=True)
         .execute()
+    )
 
     saves = result.data
     return render_template("library.html", folder_tree=tree, saves=saves)

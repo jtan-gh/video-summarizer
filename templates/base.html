@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Study Tool</title>
+  <link rel="stylesheet" href="/static/base.css" />
+  {% block head %}{% endblock %}
+</head>
+<body>
+ 
+  <header class="navbar">
+    <span class="brand">Study Tool</span>
+    <nav class="navbar-right">
+      {% block nav %}
+        {% if current_user %}
+          <a href="/">+New video</a>
+          <a href="/library">Library</a>
+          <span style="color: var(--muted);">{{ current_user.email }}</span>
+          <a href="/auth/logout">Log out</a>
+        {% else %}
+          <a href="/auth/login" class="btn btn-ghost">Sign in with Google</a>
+        {% endif %}
+      {% endblock %}
+    </nav>
+  </header>
+ 
+  {% block content %}{% endblock %}
+
+  {% if current_user %}
+  <script>
+    const INACTIVITY_LIMIT  = 25 * 60 * 1000;  // 25 min — warn before 30min Supabase default
+    const WARNING_DURATION  = 60 * 1000;        // 60s countdown before auto-logout
+    const SESSION_CHECK     = 5 * 60 * 1000;    // check server session every 5 min
+
+    let inactivityTimer;
+    let countdownTimer;
+    let countdownValue;
+
+    function resetInactivityTimer() {
+      clearTimeout(inactivityTimer);
+      inactivityTimer = setTimeout(showWarning, INACTIVITY_LIMIT);
+    }
+
+    function showWarning() {
+      document.getElementById("session-warning").classList.add("open");
+      countdownValue = 60;
+      document.getElementById("countdown").textContent = countdownValue;
+
+      countdownTimer = setInterval(() => {
+        countdownValue--;
+        document.getElementById("countdown").textContent = countdownValue;
+        if (countdownValue <= 0) {
+          clearInterval(countdownTimer);
+          window.location.href = "/auth/logout";
+        }
+      }, 1000);
+    }
+
+    function keepAlive() {
+      clearInterval(countdownTimer);
+      document.getElementById("session-warning").classList.remove("open");
+
+      // Ping the server to refresh the token
+      fetch("/auth/status").then(res => {
+        if (!res.ok) window.location.href = "/auth/logout";
+      });
+
+      resetInactivityTimer();
+    }
+
+    // Track user activity
+    ["mousemove", "keydown", "click", "scroll", "touchstart"].forEach(event => {
+      document.addEventListener(event, resetInactivityTimer, { passive: true });
+    });
+
+    // Periodically check server session health
+    setInterval(() => {
+      fetch("/auth/status").then(res => {
+        if (!res.ok) window.location.href = "/auth/logout";
+      });
+    }, SESSION_CHECK);
+
+    // Start the timer
+    resetInactivityTimer();
+  </script>
+  {% endif %}
+  
+  {% block scripts %}{% endblock %}
+ 
+</body>
+</html>

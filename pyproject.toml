@@ -13,3 +13,22 @@ dependencies = [
     "supabase>=2.31.0",
     "yt-dlp>=2026.6.9",
 ]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.22",
+]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "F",
+    "I",
+    "B"
+]
