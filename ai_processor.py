@@ -201,6 +201,7 @@ class GeminiAIProcessor(AIProcessor):
         self,
         model: str = "gemini-3.5-flash",
         temperature: float = 0.2,
+        maxOutputTokens: int = 20000,
     ):
         super().__init__(model=model, temperature=temperature)
         self.api_key = os.environ["GEMINI_API_KEY"]

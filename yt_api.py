@@ -4,6 +4,7 @@ import requests
 import yt_dlp
 from dataclasses import dataclass
 from dotenv import load_dotenv
+from youtube_transcript_api import YouTubeTranscriptApi
 
 load_dotenv()
 
@@ -143,11 +144,43 @@ def _parse_srt(srt_text: str) -> str:
     return " ".join(output)
 
 
-# ── yt-dlp fallback ───────────────────────────────────────────────────────────
+# ── youtube-transcript-api ──────────────────────────────────────────────────
+
+
+def _get_transcript_via_youtube_transcript_api(video_id: str, languages=("en",)) -> str:
+    ytt_api = YouTubeTranscriptApi()
+    fetched = ytt_api.fetch(video_id, languages=list(languages))
+
+    text = " ".join(snippet.text for snippet in fetched if snippet.text.strip())
+    if not text.strip():
+        raise ValueError("Transcript is empty after parsing (youtube-transcript-api)")
+    return text
+
+
+def _get_metadata_via_ytdlp(url: str) -> dict:
+    ydl_opts = {
+        "quiet": True,
+        "skip_download": True,
+    }
+
+    if os.path.exists("cookies.txt"):
+        ydl_opts["cookiefile"] = "cookies.txt"
+
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(url, download=False)
+
+    return {
+        "title": info.get("title", "Untitled"),
+        "channel": info.get("uploader", "Unknown"),
+        "thumbnail": info.get("thumbnail", ""),
+        "duration": info.get("duration", 0),
+    }
+
+
+# ── yt-dlp fallback (metadata + subtitles, last resort) ─────────────────────
 
 
 def _get_video_data_via_ytdlp(url: str) -> VideoData:
-    """Fallback: fetch metadata and transcript using yt-dlp."""
     print("Falling back to yt-dlp...")
 
     ydl_opts = {
@@ -195,14 +228,7 @@ def _get_video_data_via_ytdlp(url: str) -> VideoData:
     )
 
 
-# ── Public interface ──────────────────────────────────────────────────────────
-
-
 def get_video_data(url: str) -> VideoData:
-    """
-    Fetch video metadata and transcript.
-    Tries YouTube Data API v3 first, falls back to yt-dlp.
-    """
     video_id = extract_video_id(url)
 
     # ── Try YouTube Data API first ─────────────────────────────
@@ -226,9 +252,30 @@ def get_video_data(url: str) -> VideoData:
             )
 
         except Exception as e:
-            print(f"YouTube API failed: {e} — trying yt-dlp fallback")
+            print(f"YouTube API failed: {e} — trying youtube-transcript-api")
 
-    # ── Fall back to yt-dlp ────────────────────────────────────
+    # ── Try youtube-transcript-api (transcript) + yt-dlp (metadata only) ──
+    try:
+        print("Fetching transcript via youtube-transcript-api...")
+        transcript = _get_transcript_via_youtube_transcript_api(video_id)
+
+        print("Fetching metadata via yt-dlp...")
+        metadata = _get_metadata_via_ytdlp(url)
+
+        print("youtube-transcript-api success")
+        return VideoData(
+            transcript=transcript,
+            url=url,
+            title=metadata["title"],
+            channel=metadata["channel"],
+            thumbnail=metadata["thumbnail"],
+            duration=metadata["duration"],
+        )
+
+    except Exception as e:
+        print(f"{type(e).__name__}: {e} — trying full yt-dlp fallback")
+
+    # ── Last resort: full yt-dlp (metadata + subtitles) ────────
     return _get_video_data_via_ytdlp(url)
 
 
