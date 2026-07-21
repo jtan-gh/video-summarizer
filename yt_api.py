@@ -1,5 +1,7 @@
 import os
 import re
+import sys
+import logging
 import requests
 import yt_dlp
 from dataclasses import dataclass
@@ -8,6 +10,13 @@ from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api.proxies import WebshareProxyConfig
 
 load_dotenv()
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
+)
+logger = logging.getLogger("yt_api")
 
 
 @dataclass
@@ -18,6 +27,21 @@ class VideoData:
     channel: str
     thumbnail: str
     duration: int  # seconds
+
+class _YtDlpLogger:
+    def debug(self, msg):
+        if msg.startswith("[debug] "):
+            return
+        logger.info(msg)
+
+    def info(self, msg):
+        logger.info(msg)
+
+    def warning(self, msg):
+        logger.warning(msg)
+
+    def error(self, msg):
+        logger.error(msg)
 
 
 def extract_video_id(url: str) -> str:
@@ -55,7 +79,7 @@ def _get_webshare_proxies() -> dict:
     if not username.endswith("-rotate"):
         username = f"{username}-rotate"
     proxy_url = f"http://{username}:{password}@p.webshare.io:80/"
-    print(f"[proxy] routing through residential gateway p.webshare.io:80 (user={username})")
+    logger.info(f"[proxy] routing through residential gateway p.webshare.io:80 (user={username})")
     return {"http": proxy_url, "https": proxy_url}
 
 
@@ -75,10 +99,6 @@ def _build_transcript_api() -> YouTubeTranscriptApi:
 
 
 def _get_transcript_via_transcript_api(video_id: str) -> str:
-    """
-    Fetch the transcript using the youtube-transcript-api library, routed
-    through the Webshare residential proxy.
-    """
     ytt_api = _build_transcript_api()
     fetched = ytt_api.fetch(video_id, languages=["en"])
 
@@ -98,7 +118,12 @@ def _get_transcript_via_transcript_api(video_id: str) -> str:
 
 def _get_metadata_via_ytdlp(url: str, proxies: dict) -> dict:
     """Fetch title/channel/thumbnail/duration using yt-dlp."""
-    ydl_opts = {"quiet": True, "skip_download": True, "proxy": proxies["https"]}
+    ydl_opts = {
+        "quiet": True,
+        "skip_download": True,
+        "proxy": proxies["https"],
+        "logger": _YtDlpLogger(),
+    }
     if os.path.exists("cookies.txt"):
         ydl_opts["cookiefile"] = "cookies.txt"
 
@@ -119,6 +144,7 @@ def _get_transcript_via_ytdlp(url: str, proxies: dict) -> str:
         "skip_download": True,
         "writesubtitles": True,
         "writeautomaticsub": True,
+        "logger": _YtDlpLogger(),
         "subtitleslangs": ["en"],
         "subtitlesformat": "json3",
         "proxy": proxies["https"],
@@ -134,7 +160,7 @@ def _get_transcript_via_ytdlp(url: str, proxies: dict) -> str:
         raise ValueError("No English subtitles found via yt-dlp")
 
     subtitle_url = subs["en"][0]["url"]
-    print(f"Fetching transcript from: {subtitle_url}")
+    logger.info(f"Fetching transcript from: {subtitle_url}")
 
     headers = {
         "User-Agent": (
@@ -143,7 +169,7 @@ def _get_transcript_via_ytdlp(url: str, proxies: dict) -> str:
         )
     }
     resp = requests.get(subtitle_url, proxies=proxies, headers=headers, timeout=15)
-    print(f"[proxy] subtitle fetch status={resp.status_code} bytes={len(resp.content)}")
+    logger.info(f"[proxy] subtitle fetch status={resp.status_code} bytes={len(resp.content)}")
 
     if resp.status_code != 200 or not resp.content:
         raise ValueError(
@@ -173,7 +199,6 @@ def get_video_data(url: str) -> VideoData:
     Metadata always comes from yt-dlp.
     Transcript: tries youtube-transcript-api first, then falls back to
     yt-dlp's own subtitle extraction if that fails.
-
     """
     video_id = extract_video_id(url)
     proxies = _get_webshare_proxies()
@@ -181,11 +206,11 @@ def get_video_data(url: str) -> VideoData:
     metadata = _get_metadata_via_ytdlp(url, proxies)
 
     try:
-        print("Fetching transcript via youtube-transcript-api...")
+        logger.info("Fetching transcript via youtube-transcript-api...")
         transcript = _get_transcript_via_transcript_api(video_id)
-        print("youtube-transcript-api success")
+        logger.info("youtube-transcript-api success")
     except Exception as e:
-        print(f"youtube-transcript-api failed: {e} — trying yt-dlp fallback")
+        logger.warning(f"youtube-transcript-api failed: {e} — trying yt-dlp fallback")
         transcript = _get_transcript_via_ytdlp(url, proxies)
 
     return VideoData(
@@ -199,8 +224,6 @@ def get_video_data(url: str) -> VideoData:
 
 
 if __name__ == "__main__":
-    import sys
-
     url = sys.argv[1] if len(sys.argv) > 1 else "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
     video = get_video_data(url)
 
