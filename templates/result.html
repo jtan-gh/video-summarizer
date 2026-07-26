@@ -11,7 +11,6 @@
     display: flex;
     flex: 1;
     height: calc(100vh - var(--navbar-height));
-    overflow: hidden;
   }
 
   .panel {
@@ -21,11 +20,11 @@
   }
 
   #panel-article {
-    flex: 0 0 65%;
+    flex: 0 1 65%;
   }
 
   #panel-notes {
-    flex: 1;
+    flex: 1 1 0;
     background: var(--surface);
   }
 
@@ -205,15 +204,15 @@
 
   /* ── Mobile ── */
   @media (max-width: 768px) {
-    .layout {
+    main {
       flex-direction: column;
       overflow: auto;
     }
 
-    .panel {
-      flex: none !important;
-      width: 100% !important;
-      height: auto;
+    #panel-article,
+    #panel-notes {
+      flex: none;
+      width: 100%;
     }
 
     .divider {
